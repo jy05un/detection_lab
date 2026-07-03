@@ -1,0 +1,27 @@
+title: Word Normal.dotm Modified By Non-Word Process
+id: <generate-a-uuid>
+status: experimental
+description: >
+    Detects writes to the user's Normal.dotm global template by a process other
+    than Word, a persistence technique (Office template macros). BITTER used a
+    WinRAR path-traversal to replace Normal.dotm.
+references:
+    - https://ti.qianxin.com/blog/category/事件追踪/
+    - https://attack.mitre.org/techniques/T1137/001/
+author: <you>
+date: 2026/07/04
+tags:
+    - attack.persistence
+    - attack.t1137.001
+logsource:
+    category: file_event
+    product: windows
+detection:
+    selection:
+        TargetFilename|endswith: '\Templates\Normal.dotm'
+    filter_word:
+        Image|endswith: '\WINWORD.EXE'
+    condition: selection and not filter_word
+falsepositives:
+    - Backup or sync agents touching the template path (allowlist by Image)
+level: high

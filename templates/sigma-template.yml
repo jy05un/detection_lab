@@ -1,0 +1,26 @@
+title: <Short descriptive title>
+id: <generate a UUID>
+status: experimental
+description: <what this detects and why>
+references:
+    - <primary source URL>
+author: <you>
+date: YYYY/MM/DD
+tags:
+    - attack.<tactic>
+    - attack.t<technique>
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\example.exe'
+        CommandLine|contains:
+            - '<arg>'
+    filter_legit:
+        ParentImage|endswith:
+            - '\known_benign.exe'
+    condition: selection and not filter_legit
+falsepositives:
+    - <legitimate scenarios>
+level: high

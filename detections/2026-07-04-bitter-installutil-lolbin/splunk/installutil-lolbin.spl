@@ -1,0 +1,21 @@
+``` BITTER (蔓灵花/APT-Q-37) — InstallUtil + csc.exe LOLBin chain ```
+``` Adjust index/sourcetype/field names to your CIM or Sysmon onboarding.       ```
+``` Assumes Endpoint.Processes data model OR raw Sysmon EID 1.                   ```
+
+``` --- Detection A: InstallUtil proxy execution with silent-uninstall flags --- ```
+index=<endpoint_index> (sourcetype=<sysmon_or_edr>)
+    (process_name="InstallUtil.exe" OR OriginalFileName="InstallUtil.exe")
+    CommandLine="*logfile=*" CommandLine="*LogToConsole=false*" CommandLine="*/U*"
+| eval detection="installutil_proxy_exec"
+| stats min(_time) as firstTime max(_time) as lastTime
+        values(CommandLine) as CommandLine
+        by host, user, parent_process_name, process_name, detection
+
+``` --- Detection B: csc.exe with Office/script-host parent (append as needed) --- ```
+``` | append [ search index=<endpoint_index> process_name="csc.exe"
+```     parent_process_name IN ("WINWORD.EXE","EXCEL.EXE","POWERPNT.EXE",
+```                             "wscript.exe","cscript.exe","mshta.exe")
+``` | eval detection="csc_office_parent" | stats ... ] ```
+
+| `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`
+``` For ES: wrap as a correlation search, add | eval risk_score=70 and RBA. ```

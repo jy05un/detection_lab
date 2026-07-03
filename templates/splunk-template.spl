@@ -1,0 +1,13 @@
+``` <Actor> <Technique> — Splunk SPL translation of the Sigma rule ```
+``` Data model / index: adjust to your environment (Sysmon EID 1, EDR, or ES CIM) ```
+
+index=<your_endpoint_index> sourcetype=<your_proc_sourcetype>
+    (process_name="example.exe" AND CommandLine="*<arg>*")
+``` exclude known-benign parents / paths ```
+| search NOT (parent_process_name IN ("known_benign.exe"))
+| stats count min(_time) as firstTime max(_time) as lastTime
+        values(CommandLine) as CommandLine
+        by host, user, parent_process_name, process_name
+| `security_content_ctime(firstTime)`
+| `security_content_ctime(lastTime)`
+``` tune threshold / add risk score for RBA if using ES ```
