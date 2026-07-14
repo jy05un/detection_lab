@@ -1,5 +1,5 @@
 title: .NET Compiler csc.exe Spawned By Office Or Script Host
-id: <generate-a-uuid>
+id: e6002e36-3aa5-4316-8698-79d87337c121
 status: experimental
 description: >
     Detects on-host C# compilation via csc.exe with an Office application or
@@ -7,7 +7,7 @@ description: >
 references:
     - https://ti.qianxin.com/blog/category/事件追踪/
     - https://attack.mitre.org/techniques/T1027/004/
-author: <you>
+author: jy05un
 date: 2026/07/04
 tags:
     - attack.defense-evasion

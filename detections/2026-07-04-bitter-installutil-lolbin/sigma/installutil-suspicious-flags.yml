@@ -1,5 +1,5 @@
 title: InstallUtil Proxy Execution With Uninstall/Silent Flags
-id: <generate-a-uuid>
+id: e3bda3ac-274d-425a-85a6-13b6e2d0e1b6
 status: experimental
 description: >
     Detects InstallUtil.exe used as a proxy execution LOLBin with the
@@ -9,7 +9,7 @@ references:
     - https://ti.qianxin.com/blog/category/事件追踪/
     - https://lolbas-project.github.io/lolbas/Binaries/Installutil/
     - https://attack.mitre.org/techniques/T1218/004/
-author: <you>
+author: jy05un
 date: 2026/07/04
 tags:
     - attack.defense-evasion

@@ -1,75 +1,68 @@
 ---
-title: "BITTER (蔓灵花 / APT-Q-37) — csc.exe + InstallUtil.exe LOLBin chain"
+title: "BITTER (蔓灵花 / APT-Q-37) — on-host C# compile + InstallUtil LOLBin chain"
 date: 2026-07-04
 actor_cn: "蔓灵花"
 actor_western: "BITTER"
-vendor_id: "APT-Q-37 (QiAnXin) / APT-C-08 (360)"
-attack_techniques: ["T1218.004", "T1137.001", "T1059.005"]
+vendor_id: "APT-Q-37 (QiAnXin) / APT-C-08 (360) / T-APT-17"
+attack_techniques: ["T1218.004", "T1137.001", "T1059.005", "T1027.004", "T1053.005"]
 platforms: ["Windows"]
 sources:
-  - "https://ti.qianxin.com/blog/category/事件追踪/  # replace with the exact article URL"
-  - "https://attack.mitre.org/software/S0187/  # cross-reference"
+  - "QiAnXin RedDrip: 蔓灵花（APT-Q-37）以多样化手段投递新型后门组件 (2025-10-20)"
 ---
 
 ## TL;DR
 
-- **Who:** 蔓灵花 / BITTER (APT-Q-37 / APT-C-08), South Asia-nexus.
-- **What's new:** C# backdoor delivered two ways — (a) VBA macro in an `.xlam`
-  drops C# source, compiled on-host with `.NET csc.exe` then run via
-  `InstallUtil.exe`; (b) a WinRAR path-traversal replaces the user's
-  `Normal.dotm` template for persistence.
-- **Why it matters:** the whole chain is living-off-the-land — signed Microsoft
-  binaries, no dropped PE to scan.
-- **Detectable?** Yes — process-lineage and template-write telemetry catch it
-  cleanly.
+- **Who:** 蔓灵花 / BITTER (APT-Q-37 / APT-C-08 / T-APT-17). South Asia-nexus, active since Nov 2013; targets gov/military/power/nuclear in Pakistan & China.
+- **What's new:** two delivery modes, one shared C# backdoor (fetches arbitrary EXE from C2). Backdoor is compiled on-host (no stable hash) and executed via signed MS binaries.
+- **Detectable?** Yes — process lineage (csc/InstallUtil) and non-Word Normal.dotm writes.
 
-## 1. Background (CTI layer)
+## 1. Background
 
-> Fill from the cited QiAnXin report. Include: BITTER overview, CN↔Western
-> naming (see ../../naming-map.md), what changed this campaign, targets.
+BITTER was first named by Forcepoint (2016) from a `BITTER` string in its RAT traffic; QiAnXin named it 蔓灵花 the same year. Long-running espionage actor. Historically CHM + macro-Office spearphishing; this campaign adds on-host compilation and a WinRAR-traversal template overwrite.
 
 ## 2. TTP breakdown (ATT&CK)
 
 | # | Technique | ATT&CK | Observable |
 |---|-----------|--------|------------|
-| 1 | On-host C# compilation | T1059.005 / T1027.004 | `csc.exe` spawned by Office/script host |
+| 1 | On-host C# compilation | T1059.005 / T1027.004 | `csc.exe` spawned by Office/script host; output DLL in `C:\ProgramData\USOShared\` |
 | 2 | InstallUtil proxy execution | T1218.004 | `InstallUtil.exe` with `/logfile= /LogToConsole=false /U` |
-| 3 | Office template persistence | T1137.001 | write to `...\Templates\Normal.dotm` by non-Word process |
+| 3 | Startup + scheduled task persistence | T1053.005 | `kefe.bat` in Startup → task beaconing to C2 |
+| 4 | Office template persistence | T1137.001 | write to `...\Templates\Normal.dotm` by non-Word process |
 
-## 3. Detection engineering (the spine)
+**Delivery:**
+- **Mode 1:** `Nominated Officials for the Conference.xlam` → macro decoy msgbox → base64 C# → `C:\programdata\cayote.log` → `csc.exe` → `C:\Programdata\USOShared\vlcplayer.dll` → `InstallUtil.exe`. Persistence: `kefe.bat` (Startup) → scheduled task → `keeferbeautytrends[.]com/d6Z2.php?rz=`.
+- **Mode 2:** WinRAR path traversal (suspected CVE-2025-8088; traverses on 7.11, not 7.12 → likely earlier bug) → RAR carries `Document.docx` + `Normal.dotm` (two-level parent traversal) → overwrites template library `Normal.dotm` → opening the docx runs the template macro → payload from `koliwooclients[.]com`.
 
-**Telemetry:** process creation (Sysmon EID 1 or EDR) for #1–2; file creation
-(Sysmon EID 11 / EDR file events) for #3.
+## 3. Detection engineering
 
-**Sigma:** `sigma/installutil-suspicious-flags.yml`,
-`sigma/csc-office-parent.yml`, `sigma/normal-dotm-write.yml`.
+**Telemetry:** process creation (Sysmon EID 1 / EDR) for #1–2; file events (EID 11 / EDR) for #4.
 
-**Splunk SPL:** `splunk/installutil-lolbin.spl`.
+- `sigma/installutil-suspicious-flags.yml` — T1218.004
+- `sigma/csc-office-parent.yml` — T1027.004 / T1059.005
+- `sigma/normal-dotm-write.yml` — T1137.001
+- `splunk/installutil-lolbin.spl` — Splunk translation
 
-**Tuning / FPs:** `csc.exe` fires for legit .NET build/dev activity — scope by
-parent (Office/`wscript`/`mshta`) and by non-developer hosts. `InstallUtil` is
-used by some legit installers — the `/LogToConsole=false /U` combination is the
-high-signal part. `Normal.dotm` is written by Word itself constantly — the
-signal is a **non-Word** writer (archive tools, scripts).
+**Tuning / FPs:** scope `csc.exe` to non-dev hosts + suspicious parents; InstallUtil high-confidence only with the `/LogToConsole=false /U` + ProgramData DLL combo; allowlist backup/sync agents for Normal.dotm by Image, not path.
 
-**Coverage gaps:** does not catch the initial `.xlam` delivery or the WinRAR
-CVE exploitation itself — pair with mail/attachment and vuln-management controls.
+**Coverage gaps:** does not catch `.xlam` delivery or the WinRAR extraction — pair with mail/attachment controls and WinRAR patching.
 
-## 4. Cloud angle (optional)
+## 4. Cloud angle
 
-If the `.xlam` arrives via email, add an O365/Exchange message-trace correlation
-for the lure. Otherwise endpoint-only; skip.
+If the `.xlam` arrives by email, add an O365/Exchange message-trace correlation on the lure filename/sender. Otherwise endpoint-only.
 
 ## 5. IOCs
 
-> Populate from the report — hashes, C2 domains/IPs, filenames. Do **not**
-> invent values.
-
 | Type | Value | Note |
 |------|-------|------|
-| SHA256 | `<from report>` | C# loader |
-| Domain | `<from report>` | C2 |
+| Domain | `keeferbeautytrends[.]com` | Mode 1 scheduled-task C2 |
+| Domain | `koliwooclients[.]com` | Mode 2 Normal.dotm C2 |
+| Filename | `Nominated Officials for the Conference.xlam` | Mode 1 lure |
+| Path | `C:\programdata\cayote.log` | dropped C# source |
+| Path | `C:\Programdata\USOShared\vlcplayer.dll` | compiled backdoor |
+| File | `kefe.bat` | Startup persistence |
+
+> Add SHA256 hashes from the report's IOC appendix — do not invent values.
 
 ## 6. Limitations
 
-Built from public sources; technique-based logic. Validate and tune before use.
+Public sources only; technique-based logic. Validate and tune before use.
