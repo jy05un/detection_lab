@@ -6,6 +6,8 @@ actor_western: "BITTER"
 vendor_id: "APT-Q-37 (QiAnXin) / APT-C-08 (360) / T-APT-17"
 attack_techniques: ["T1218.004", "T1137.001", "T1059.005", "T1027.004", "T1053.005"]
 platforms: ["Windows"]
+targeted_sectors: ["government", "military", "energy", "nuclear"]
+targeted_regions: ["Pakistan", "China"]
 sources:
   - "QiAnXin RedDrip: 蔓灵花（APT-Q-37）以多样化手段投递新型后门组件 (2025-10-20)"
 ---
@@ -30,6 +32,7 @@ BITTER was first named by Forcepoint (2016) from a `BITTER` string in its RAT tr
 | 4 | Office template persistence | T1137.001 | write to `...\Templates\Normal.dotm` by non-Word process |
 
 **Delivery:**
+
 - **Mode 1:** `Nominated Officials for the Conference.xlam` → macro decoy msgbox → base64 C# → `C:\programdata\cayote.log` → `csc.exe` → `C:\Programdata\USOShared\vlcplayer.dll` → `InstallUtil.exe`. Persistence: `kefe.bat` (Startup) → scheduled task → `keeferbeautytrends[.]com/d6Z2.php?rz=`.
 - **Mode 2:** WinRAR path traversal (suspected CVE-2025-8088; traverses on 7.11, not 7.12 → likely earlier bug) → RAR carries `Document.docx` + `Normal.dotm` (two-level parent traversal) → overwrites template library `Normal.dotm` → opening the docx runs the template macro → payload from `koliwooclients[.]com`.
 
@@ -56,12 +59,31 @@ If the `.xlam` arrives by email, add an O365/Exchange message-trace correlation 
 |------|-------|------|
 | Domain | `keeferbeautytrends[.]com` | Mode 1 scheduled-task C2 |
 | Domain | `koliwooclients[.]com` | Mode 2 Normal.dotm C2 |
+| Domain | `esanojinjasvc[.]com` | additional C2 infrastructure |
 | Filename | `Nominated Officials for the Conference.xlam` | Mode 1 lure |
 | Path | `C:\programdata\cayote.log` | dropped C# source |
 | Path | `C:\Programdata\USOShared\vlcplayer.dll` | compiled backdoor |
 | File | `kefe.bat` | Startup persistence |
+| MD5 | `b165b489c5f8c4e136364664502d68f1` | related sample |
+| MD5 | `18164f7b3d320a79b6db634f718a1095` | related sample |
+| MD5 | `f6f2fdc38cd61d8d9e8cd35244585967` | related sample |
+| MD5 | `4bedd8e2b66cc7d64b293493ef5b8942` | related sample |
+| MD5 | `f16f2e4317c37085cad630d41001f7c3` | related sample |
 
-> Add SHA256 hashes from the report's IOC appendix — do not invent values.
+**C2 URLs**
+
+```
+hxxps://msoffice.365cloudz.esanojinjasvc[.]com/cloudzx/msweb/drxbds23.php
+hxxps://msoffice.365cloudz.esanojinjasvc[.]com/cloudzx/msweb/drdxcsv34.php
+hxxps://msoffice.365cloudz.esanojinjasvc[.]com/cloudzx/msweb/drxcvg45.php
+hxxps://teamlogin.esanojinjasvc[.]com/teamesano/drivers/teamzid.php
+hxxps://teamlogin.esanojinjasvc[.]com/teamesano/drivers/teamidcrz/
+hxxps://teamlogin.esanojinjasvc[.]com/teamesano/drivers/teamsid.php
+```
+
+> Hashes are MD5 as published in the source report; the report does not map each
+> hash to a specific artifact, so they are listed as a sample set. Domains and
+> URLs are defanged.
 
 ## 6. Limitations
 
